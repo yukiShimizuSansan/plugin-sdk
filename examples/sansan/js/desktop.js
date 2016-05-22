@@ -128,18 +128,18 @@ jQuery.noConflict();
                 hide: 400,
                 modal: true,
                 buttons: {
-                    "登録": function() {
+                    '登録': function() {
                         // 選択されたデータを抽出する
                         var records = [];
                         $('.sansan-lookup-select:checked').each(function(i, el){
-                            var params = Sansanlookup.getElementParams($(el).parents(".sansan-lookup-tr"));
+                            var params = Sansanlookup.getElementParams($(el).parents('.sansan-lookup-tr'));
                             var record = kintone.app.record.get();
                             for (var key in params) {
-                                if(C_COPYFIELD[key] !== "null"){
-                                    record["record"][C_COPYFIELD[key]]["value"] = params[key];  
+                                if(C_COPYFIELD[key] !== 'null'){
+                                    record['record'][C_COPYFIELD[key]]['value'] = params[key];  
                                 }
                             }
-                            records.push(record["record"]);
+                            records.push(record['record']);
                         });
 
                         // Sansan データ登録
@@ -149,12 +149,12 @@ jQuery.noConflict();
                             // エラーの場合はメッセージを表示する
                             var errmsg = 'レコード取得時にエラーが発生しました。';
                             // レスポンスにエラーメッセージが含まれる場合はメッセージを表示する
-                            if (error.message !== undefined) {
+                            if (error.message !== void 0) {
                                 errmsg += '\n' + error.message;
                             }
                             alert(errmsg);
                         });
-                        $(this).dialog("close");
+                        $(this).dialog('close');
                     },
                     Cancel: function() {
                         $(this).dialog('close');
