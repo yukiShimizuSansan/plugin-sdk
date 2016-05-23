@@ -234,19 +234,20 @@ jQuery.noConflict();
         getLookupTagList: function() {
 
             Sansanlookup.getSansanTag().then(function(sansan_tags) {
-
+                var $errorMessage = $('<div></div>', {
+                    id : 'sansan_lookup_validator_error',
+                    'class': 'input-error-custom',
+                });
                 //Sansan取得タグ数(0~5000件)チェック
                 if (sansan_tags.length === 0) {
-                    var nodata_msg = '<div id="sansan_lookup_validator_error" class="input-error-custom">' +
-                    '<span>データがありません。</span></div>';
-                    Sansanlookup.lookUpMessage($(nodata_msg));
+                    $errorMessage.text = 'データがありません。';
+                    Sansanlookup.lookUpMessage($errorMessage);
                     Spin.hideSpinner();
                     return false;
                 } else if (sansan_tags.length >= 5000) {
                     //5000件以上の場合エラー
-                    var find_msg = '<div id="sansan_lookup_validator_error" class="input-error-custom">' +
-                    '<span>5000件以上のレコードがヒットしました<br>検索条件で絞り込んでください</span></div>';
-                    Sansanlookup.lookUpMessage($(find_msg));
+                    $errorMessage.text = '5000件以上のレコードがヒットしました。検索条件で絞り込んでください';
+                    Sansanlookup.lookUpMessage($errorMessage);
                     Spin.hideSpinner();
                     return false;
                 } else {
@@ -262,47 +263,76 @@ jQuery.noConflict();
         
         // タグ一覧を表示する
         createLookupTagListView: function(sansan_tags) {
-            var result;
-            var taglist = "";
-            var count = 0;
+            var count = sansan_tags.length;
 
             //Sansan検索結果のリストを作成
-            for (var i = 0; sansan_tags.length > i; i++) {
+            var $tagListTableBody = $('<tbody></tbody>');
+            for (var i = 0; i < count; i++) {
                 var sansan_record = sansan_tags[i];
+                var $tagRow = $('<tr></tr>', {
+                    id: 'lookup_list' + i,
+                    'class': 'sansan-lookup-tr'
+                });
 
-                taglist +=
-                '<tr id="lookuplist_' + i + '" class="sansan-lookup-tr">' +
-                //1列目：選択ボタン
-                '<td class="lookup-cell-kintone">' +
-                '<span><button class="button-simple-custom sansan-lookup-select" type="button">' +
-                '選択</button></span>' + '</td>' +
-                //2列目：タグ
-                '<td>' + '<div class="line-cell-kintone"><span>' +
-                escapeHtml(sansan_record['name']) + '</span></div>' +
-                //選択ボタンクリック時の取得値
-                '<input class="sansan_lookup_tagid" value="' +
-                escapeHtml(sansan_record['id']) +
-                '" type="hidden">' + '</td>' + '</tr>';
-                count++;
+                var $selectButton = $('<td></td>',{
+                    'class': 'lookup-cell-kintone'
+                }).append(
+                    $('<span></span>').append(
+                        $('<button></button>', {
+                            'class': 'button-simple-custom sansan-lookup-select',
+                            type: 'button',
+                            text: '選択'
+                        })
+                    )
+                );
+
+                var $tag = $('<td></td>', {
+                    'class': 'lookup-cell-kintone',
+                }).append($('<div></div>', {
+                    text: escapeHtml(sansan_record.name)
+                })).append($('<input></input>', {
+                    'class': 'sansan_lookup_tag',
+                    value: escapeHtml(sansan_record.id),
+                    type: 'hidden'
+                }));
+                $tagListTableBody.append($tagRow.append($selectButton).append($tag));
             }
-            result =
-            '<table class="listTable-kintone lookup-table-kintone">' +
-            '<thead class="lookup-thead-gaia">' + '<tr>' +
-            //1列目見出し
-            '<th>' + '<div><span class="recordlist-header-label-kintone">' + count + '件' + '</span></div>' + '</th>' +
-            //2列目見出し
-            '<th>' + '<div><span class="recordlist-header-label-kintone">タグ名</span></div>' + '</th>' +
-            '</tr>' + '</thead>' + '<tbody>' + taglist + '</tbody>' + '</table>';
 
-            return result;
+            var $countHeader = $('<th></th>').append(
+                $('<div></div>').append(
+                    $('<span></span>',{
+                        'class': 'recordlist-header-label-kintone',
+                        text: count + '件'
+                    })
+                )
+            );
+            var $tagHeader = $('<th></th>').append(
+                $('<div></div>').append(
+                    $('<span></span>', {
+                        'class': 'recordlist-header-label-kintone',
+                        text: 'タグ名'
+                    })
+                )
+            );
+            var $tableHeader = $('<thead></thead>', {
+                'class': 'lookup-thead-gaia'
+            }).append(
+                $('<tr></tr>')
+                .append($countHeader)
+                .append($tagHeader)
+            );
+
+            return $('<table></table>', {
+                'class': 'listTable-kintone lookup-table-kintone'
+            }).append($tableHeader).append($tagListTableBody);
         },
         
-        showTagDialog: function(date_list) {
+        showTagDialog: function($date_list) {
 
             //ダイアログの初期設定
             var $date_dialog = $('<div>');
             $date_dialog.attr('id', 'sansan-date-dialog');
-            $date_dialog.html(date_list);
+            $date_dialog.append($date_list);
             $date_dialog.dialog({
                 title: 'タグ設定',
                 autoOpen: false,
@@ -320,7 +350,7 @@ jQuery.noConflict();
             });
             $('#sansan-date-dialog').dialog('open');
             $(".sansan-lookup-select").click(function() {
-                var tagId = $(this).parents(".sansan-lookup-tr").find(".sansan_lookup_tagid").val();
+                var tagId = $(this).parents(".sansan-lookup-tr").find(".sansan_lookup_tag").val();
                 Sansanlookup.doSearch(null, tagId);
                 $('#sansan-date-dialog').dialog('close');
                 $('#sansan-date-dialog').remove();
@@ -430,18 +460,18 @@ jQuery.noConflict();
             //Sansanよりデータ取得
             var record = kintone.app.record.get();
             var offset = opt_offset || 0;
-            var value = record['record'][C_KEYFIELD]['value'] || "";
+            var value = record['record'][C_KEYFIELD]['value'] || '';
             var allrecords = opt_records || [];
-            var url = "https://api.sansan.com/v1/bizCards";
+            var url = 'https://api.sansan.com/v1/bizCards';
             if (dates) {
-                url += "?range=all" + "&registeredFrom" + "=" + encodeURIComponent(dates[0]) +
-                        "&registeredTo" + "=" + encodeURIComponent(dates[1]);
+                url += '?range=all' + '&registeredFrom' + '=' + encodeURIComponent(dates[0]) +
+                        '&registeredTo' + '=' + encodeURIComponent(dates[1]);
             } else if(tagId) {
-                url += "/search" + "?range=all&tagId=" + tagId;
+                url += '/search' + '?range=all&tagId=' + tagId;
             } else {
-                url += "/search" + "?range=all";
-                if (value !== "") {
-                    url += "&" + C_ORIGINALFIELD + "=" + encodeURIComponent(value);
+                url += '/search' + '?range=all';
+                if (value !== '') {
+                    url += '&' + C_ORIGINALFIELD + '=' + encodeURIComponent(value);
                 }
             }
             url += "&offset=" + offset;
@@ -471,17 +501,23 @@ jQuery.noConflict();
             //Sansanよりタグデータ取得
             var offset = opt_offset || 0;
             var alltags = opt_records || [];
-            var url = "https://api.sansan.com/v1/tags?range=all";
-            url += "&offset=" + offset;
-            return kintone.plugin.app.proxy(PLUGIN_ID, url, "GET", {}, {}).then(function(body) {
+            var url = 'https://api.sansan.com/v1/tags';
+            var data = {
+                range: 'all',
+                offset: offset
+            };
+
+            return kintone.plugin.app.proxy(PLUGIN_ID, url, 'GET', {}, data).then(function(body) {
                 alltags = alltags.concat(JSON.parse(body[0]).data);
-                if (JSON.parse(body[1]) !== 200) {
+                var statusCode = JSON.parse(body[1]);
+                if (statusCode !== 200) {
                     var error_message = JSON.parse(body[0]).error[0].code;
-                    if (JSON.parse(body[1]) === 429) {
+                    if (statusCode === 429) {
                         error_message = "リクエスト数が制限値を超えています。\n5分以上時間を置いてから再度取得してください。";
                     }
                     return Promise.reject(new Error(error_message));
                 }
+
                 //5000件以上は処理終了
                 if (alltags.length >= 5000) {
                     return alltags;
